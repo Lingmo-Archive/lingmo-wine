@@ -1,0 +1,96 @@
+description: regenerate vulkan files
+author: Michael Gilbert <mgilbert@debian.org>
+
+--- a/dlls/winevulkan/make_vulkan
++++ b/dlls/winevulkan/make_vulkan
+@@ -87,6 +87,10 @@ EXT_BASE = 1000000000
+ EXT_BLOCK_SIZE = 1000
+ 
+ UNSUPPORTED_EXTENSIONS = [
++    # Video decoder extensions from vulkan 1.3.239 are not yet supported
++    "VK_KHR_video_decode_h264",
++    "VK_KHR_video_decode_h265",
++
+     # Instance extensions
+     "VK_EXT_headless_surface", # Needs WSI work.
+     "VK_KHR_display", # Needs WSI work.
+@@ -1558,7 +1562,7 @@ class VkMember(VkVariable):
+                         self.name, input, output, count, suffix)
+                 else:
+                     # Nothing needed this yet.
+-                    LOGGER.warn("TODO: implement copying of static array for {0}.{1}".format(self.type, self.name))
++                    LOGGER.warning("TODO: implement copying of static array for {0}.{1}".format(self.type, self.name))
+             elif self.is_handle() and self.is_wrapped():
+                 handle = self.type_info["data"]
+                 if direction == Direction.OUTPUT:
+@@ -1736,7 +1740,7 @@ class VkParam(VkVariable):
+         # Since we have parsed all types before hand, this should not happen.
+         type_info = types.get(type_elem.text, None)
+         if type_info is None:
+-            LOGGER.err("type info not found for: {0}".format(type_elem.text))
++            LOGGER.error("type info not found for: {0}".format(type_elem.text))
+ 
+         return VkParam(type_info, const=const, pointer=pointer, name=name, array_len=array_len,
+                        dyn_array_len=dyn_array_len, object_type=object_type, optional=optional,
+@@ -1788,7 +1792,7 @@ class VkParam(VkVariable):
+                 # Don't care about specific types for non-Windows platforms.
+                 self.format_str = ""
+             else:
+-                LOGGER.warn("Unhandled type: {0}".format(self.type_info))
++                LOGGER.warning("Unhandled type: {0}".format(self.type_info))
+ 
+     def copy(self, direction, conv, unwrap, prefix=""):
+         win_type = "win32" if conv else "win64"
+@@ -2689,7 +2693,9 @@ class VkGenerator(object):
+ 
+     def _generate_copyright(self, f, spec_file=False):
+         f.write("# " if spec_file else "/* ")
+-        f.write("Automatically generated from Vulkan vk.xml; DO NOT EDIT!\n")
++        f.write("Automatically generated from ")
++        f.write(self.registry._filename)
++        f.write("; DO NOT EDIT!\n")
+         lines = ["", "This file is generated from Vulkan vk.xml file covered",
+             "by the following copyright and permission notice:"]
+         lines.extend([l.rstrip(" ") for l in self.registry.copyright.splitlines()])
+@@ -3252,6 +3258,7 @@ class VkRegistry(object):
+         self.funcpointers = None
+         self.handles = None
+         self.structs = None
++        self._filename = reg_filename
+ 
+         # We aggregate all types in here for cross-referencing.
+         self.funcs = {}
+@@ -3864,11 +3871,6 @@ def set_working_directory():
+     path = os.path.dirname(path)
+     os.chdir(path)
+ 
+-def download_vk_xml(filename):
+-    url = "https://raw.githubusercontent.com/KhronosGroup/Vulkan-Docs/v{0}/xml/vk.xml".format(VK_XML_VERSION)
+-    if not os.path.isfile(filename):
+-        urllib.request.urlretrieve(url, filename)
+-
+ def main():
+     parser = argparse.ArgumentParser()
+     parser.add_argument("-v", "--verbose", action="count", default=0, help="increase output verbosity")
+@@ -3888,7 +3890,6 @@ def main():
+         vk_xml = args.xml
+     else:
+         vk_xml = "vk-{0}.xml".format(VK_XML_VERSION)
+-        download_vk_xml(vk_xml)
+ 
+     registry = VkRegistry(vk_xml)
+     generator = VkGenerator(registry)
+--- a/dlls/wined3d/utils.c
++++ b/dlls/wined3d/utils.c
+@@ -5521,9 +5521,9 @@ const char *wined3d_debug_vkresult(VkRes
+     switch (vr)
+     {
+ #define WINED3D_TO_STR(x) case x: return #x
+-        WINED3D_TO_STR(VK_ERROR_INVALID_OPAQUE_CAPTURE_ADDRESS_KHR);
++        WINED3D_TO_STR(VK_ERROR_INVALID_OPAQUE_CAPTURE_ADDRESS);
+         WINED3D_TO_STR(VK_ERROR_NOT_PERMITTED_EXT);
+-        WINED3D_TO_STR(VK_ERROR_FRAGMENTATION_EXT);
++        WINED3D_TO_STR(VK_ERROR_FRAGMENTATION);
+         WINED3D_TO_STR(VK_ERROR_INVALID_EXTERNAL_HANDLE);
+         WINED3D_TO_STR(VK_ERROR_OUT_OF_POOL_MEMORY);
+         WINED3D_TO_STR(VK_ERROR_INVALID_SHADER_NV);

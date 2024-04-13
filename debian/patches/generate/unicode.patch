@@ -1,0 +1,111 @@
+description: use system unicode
+author: Michael Gilbert <mgilbert@debian.org>
+
+--- a/tools/make_unicode
++++ b/tools/make_unicode
+@@ -25,36 +25,38 @@ use Digest::SHA;
+ use Encode;
+ use Time::Local qw(timegm_modern);
+ 
+-my $UNIVERSION = "15.1.0";
++my $UNIVERSION = `dpkg-parsechangelog --file /usr/share/doc/unicode-data/changelog.Debian.gz --show-field Version | sed s/-.*//`;
++chomp($UNIVERSION);
++
+ my $CLDRVERSION = "44";
+ my $ISO639VERSION = "20230123";
+ my $TZVERSION = "2023c";
+ 
+ my %data_files =
+ (
+- ucd       => { url  => "https://www.unicode.org/Public/$UNIVERSION/ucd/UCD.zip", name => "UCD-$UNIVERSION.zip",
++ ucd       => { url  => "/usr/share/unicode",
+                 sha  => "cb1c663d053926500cd501229736045752713a066bd75802098598b7a7056177" },
+- unihan    => { url  => "https://www.unicode.org/Public/$UNIVERSION/ucd/Unihan.zip", name => "Unihan-$UNIVERSION.zip",
++ unihan    => { url  => "/usr/share/unicode",
+                 sha  => "a0226610e324bcf784ac380e11f4cbf533ee1e6b3d028b0991bf8c0dc3f85853" },
+- idna      => { url  => "https://www.unicode.org/Public/idna/$UNIVERSION/IdnaMappingTable.txt", name => "IdnaMappingTable-$UNIVERSION.txt",
++ idna      => { url  => "/usr/share/unicode/idna",
+                 sha  => "402cbd285f1f952fcd0834b63541d54f69d3d8f1b8f8599bf71a1a14935f82c4" },
+- cldr      => { url  => "https://github.com/unicode-org/cldr/archive/refs/tags/release-$CLDRVERSION.zip",
++ cldr      => { url  => "debian/unicode/cldr/release-$CLDRVERSION.zip",
+                 sha  => "38d04cf28ccfee8b86d2feecebf99d5dc6d3317f53f87ba53b1e774f6395573c" },
+- cldr33    => { url  => "https://www.unicode.org/Public/cldr/33/cldr-common-33.0.zip",
++ cldr33    => { url  => "debian/unicode/cldr33",
+                 sha  => "fa3490082c086d21257153609642f54fcf788fcfda4966fe67f3f6daca0d58b9" },
+- sorting   => { url  => "https://download.microsoft.com/download/C/F/7/CF713A5E-9FBC-4FD6-9246-275F65C0E498/Windows 10 Sorting Weight Table.txt",
++ sorting   => { url  => "debian/unicode/Windows 10 Sorting Weight Table.txt",
+                 sha  => "81fcfa1e5ed3e3a94d329959ff7d97d522ddf9d653d2c4d6ddcccc5cd4df663f" },
+- codepages => { url  => "https://download.microsoft.com/download/C/F/7/CF713A5E-9FBC-4FD6-9246-275F65C0E498/Windows Supported Code Page Data Files.zip",
++ codepages => { url  => "debian/unicode/Windows Supported Code Page Data Files.zip",
+                 sha  => "5074e6dd253056ba61fc6c870c9a955467855129c6ad3a51761c386b301b125a" },
+- iso639    => { url  => "https://iso639-3.sil.org/sites/iso639-3/files/downloads/iso-639-3_Code_Tables_$ISO639VERSION.zip",
++ iso639    => { url  => "debian/unicode/iso-639-3_Code_Tables_$ISO639VERSION.zip",
+                 sha  => "884faa6cc5ac5181ed7969eed75355c1bc665447614cf4c06c62e87b38fe6a97" },
+- ksx1001   => { url  => "https://www.unicode.org/Public/MAPPINGS/OBSOLETE/EASTASIA/KSC/KSX1001.TXT",
++ ksx1001   => { url  => "debian/unicode/mappings/OBSOLETE/EASTASIA/KSC/KSX1001.TXT",
+                 sha  => "d8d2a35206ac0ea2865f5d801c9d6717f735bf46f263a658a64a960abe59e371" },
+- jis0208   => { url  => "https://www.unicode.org/Public/MAPPINGS/OBSOLETE/EASTASIA/JIS/JIS0208.TXT",
++ jis0208   => { url  => "debian/unicode/mappings/OBSOLETE/EASTASIA/JIS/JIS0208.TXT",
+                 sha  => "1c571870457f19c97720631fa83ee491549a96ba1436da1296786a67d8632e87" },
+- jis0212   => { url  => "https://www.unicode.org/Public/MAPPINGS/OBSOLETE/EASTASIA/JIS/JIS0212.TXT",
++ jis0212   => { url  => "debian/unicode/mappings/OBSOLETE/EASTASIA/JIS/JIS0212.TXT",
+                 sha  => "477820bb3055bbcc90880d788cd95607d221dc94457bae249231adecf13c12e6" },
+- tzdata    => { url  => "https://data.iana.org/time-zones/releases/tzdata$TZVERSION.tar.gz",
++ tzdata    => { url  => "debian/tzdata/tzdata$TZVERSION.tar.gz",
+                 sha  => "3f510b5d1b4ae9bb38e485aa302a776b317fb3637bdb6404c4adf7b6cadd965c" },
+ );
+ 
+@@ -1937,28 +1939,32 @@ sub open_data_file($@)
+ {
+     my ($id, $name) = @_;
+     my $data = $data_files{$id};
+-    my $cache = ($ENV{XDG_CACHE_HOME} || "$ENV{HOME}/.cache") . "/wine";
+     local *FILE;
+ 
+     my $url = $data->{url};
+-    my $filename = "$cache/" . ($data->{name} || ($url =~ s/.*\/([^\/]+)$/$1/r));
+-    unless (-f $filename)
++    if (!-d $url) # skip shasum check for directories
+     {
+-        print "Fetching $url...\n";
+-        system "mkdir", "-p", $cache;
+-        !system "wget", "-q", "-O", $filename, $url or die "cannot fetch $url";
++        my $sha = Digest::SHA->new( "sha256" )->addfile( $url )->hexdigest;
++        die "invalid checksum $sha for $url" unless $sha eq $data->{sha};
+     }
+ 
+-    my $sha = Digest::SHA->new( "sha256" )->addfile( $filename )->hexdigest;
+-    die "invalid checksum $sha for $filename" unless $sha eq $data->{sha};
++    my $filename = "$url";
++    if ($name)
++    {
++        $filename = "$url/$name";
++    }
+ 
+-    if ($filename =~ /\.zip$/)
++    if ($url =~ /\.zip$/)
++    {
++        open FILE, "-|", "unzip", "-p", $url, $name or die "cannot extract $name from $url";
++    }
++    elsif ($url =~ /\.tar\.gz$/)
+     {
+-        open FILE, "-|", "unzip", "-p", $filename, $name or die "cannot extract $name from $filename";
++        open FILE, "-|", "tar", "-x", "-f", $url, "-O", $name or die "cannot extract $name from $url";
+     }
+-    elsif ($filename =~ /\.tar\.gz$/)
++    elsif ($filename =~ /\.tar\.bz2$/)
+     {
+-        open FILE, "-|", "tar", "-x", "-f", $filename, "-O", $name or die "cannot extract $name from $filename";
++        open FILE, "-|", "tar", "-x", "-f", $filename or die "cannot extract $name from $filename";
+     }
+     else
+     {
+@@ -2307,7 +2313,7 @@ sub load_data()
+ 
+     # load the Unihan mappings
+ 
+-    my $UNIHAN = open_data_file( "unihan", "Unihan_Variants.txt" );
++    my $UNIHAN = open_data_file( "unihan", "Unihan_Variants.txt.bz2" );
+     while (<$UNIHAN>)
+     {
+         s/\#.*//;  # remove comments

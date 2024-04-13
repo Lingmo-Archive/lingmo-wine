@@ -1,0 +1,14 @@
+description: build with gcc instead of clang on arm64
+author: Michael Gilbert <mgilbert@debian.org>
+
+--- a/configure.ac
++++ b/configure.ac
+@@ -1047,7 +1047,7 @@ This is an error since --enable-archs=$w
+     LDFLAGS=$saved_LDFLAGS
+ done
+ 
+-if test $HOST_ARCH = aarch64
++if test $HOST_ARCH = ""
+ then
+     test "x$PE_ARCHS" != x || AC_MSG_ERROR([PE cross-compilation is required for ARM64, please install clang/llvm-dlltool/lld, or llvm-mingw.])
+     DLLEXT=""

@@ -1,0 +1,92 @@
+description: generate automatically generated request code
+author: Michael Gilbert <mgilbert@debian.org>
+
+--- a/tools/make_requests
++++ b/tools/make_requests
+@@ -290,16 +290,11 @@ sub PARSE_REQUESTS()
+ }
+ 
+ ### Retrieve the server protocol version from the existing server_protocol.h file
++# Modified by -1, see debian/scripts/import
+ 
+ sub GET_PROTOCOL_VERSION()
+ {
+-    my $protocol = 0;
+-    open SERVER_PROT, "include/wine/server_protocol.h" or return 0;
+-    while (<SERVER_PROT>)
+-    {
+-        if (/^\#define SERVER_PROTOCOL_VERSION (\d+)/) { $protocol = $1; last; }
+-    }
+-    close SERVER_PROT;
++    my $protocol = 785;
+     return $protocol;
+ }
+ 
+@@ -477,7 +472,7 @@ foreach my $err (sort keys %errors)
+ push @trace_lines, "    { NULL, 0 }\n";
+ push @trace_lines, "};\n";
+ 
+-replace_in_file( "server/trace.c",
++replace_in_file( "server/trace.generated",
+                  "### make_requests begin ###",
+                  "### make_requests end ###",
+                  @trace_lines );
+@@ -505,7 +500,7 @@ foreach my $type (sort keys %formats)
+ push @request_lines, @asserts;
+ push @request_lines, "\n#endif  /* WANT_REQUEST_HANDLERS */\n";
+ 
+-replace_in_file( "server/request.h",
++replace_in_file( "server/request.generated",
+                  "### make_requests begin ###",
+                  "### make_requests end ###",
+                  @request_lines );
+--- a/server/request.h
++++ b/server/request.h
+@@ -115,9 +115,9 @@ static inline void set_reply_data_ptr( v
+     current->reply_data = data;
+ }
+ 
++#include "request.generated"
+ 
+-/* Everything below this line is generated automatically by tools/make_requests */
+-/* ### make_requests begin ### */
++/*
+ 
+ DECL_HANDLER(new_process);
+ DECL_HANDLER(get_new_process_info);
+@@ -2337,9 +2337,8 @@ C_ASSERT( sizeof(struct get_next_thread_
+ C_ASSERT( FIELD_OFFSET(struct get_next_thread_reply, handle) == 8 );
+ C_ASSERT( sizeof(struct get_next_thread_reply) == 16 );
+ 
+-#endif  /* WANT_REQUEST_HANDLERS */
++#endif
+ 
+-/* ### make_requests end ### */
+-/* Everything above this line is generated automatically by tools/make_requests */
++*/
+ 
+ #endif  /* __WINE_SERVER_REQUEST_H */
+--- a/server/trace.c
++++ b/server/trace.c
+@@ -1385,8 +1385,9 @@ static void dump_varargs_handle_infos( c
+ 
+ typedef void (*dump_func)( const void *req );
+ 
+-/* Everything below this line is generated automatically by tools/make_requests */
+-/* ### make_requests begin ### */
++#include "trace.generated"
++
++/*
+ 
+ static void dump_new_process_request( const struct new_process_request *req )
+ {
+@@ -5647,8 +5648,7 @@ static const struct
+     { NULL, 0 }
+ };
+ 
+-/* ### make_requests end ### */
+-/* Everything above this line is generated automatically by tools/make_requests */
++*/
+ 
+ static const char *get_status_name( unsigned int status )
+ {

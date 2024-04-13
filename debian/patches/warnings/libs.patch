@@ -1,0 +1,48 @@
+description: fix warnings in embedded libs
+author: Michael Gilbert <mgilbert@debian.org>
+
+--- a/libs/xml2/Makefile.in
++++ b/libs/xml2/Makefile.in
+@@ -1,6 +1,6 @@
+ EXTLIB    = libxml2.a
+ EXTRAINCL = $(XML2_PE_CFLAGS)
+-EXTRADEFS = -DHAVE_VA_COPY
++EXTRADEFS = -DHAVE_VA_COPY -Wno-format-extra-args
+ 
+ SOURCES = \
+ 	HTMLparser.c \
+--- a/libs/faudio/src/FAudio_internal.h
++++ b/libs/faudio/src/FAudio_internal.h
+@@ -82,8 +82,8 @@
+ #define FAudio_snprintf snprintf
+ #define FAudio_vsnprintf vsnprintf
+ #define FAudio_getenv getenv
+-#define FAudio_PRIu64 PRIu64
+-#define FAudio_PRIx64 PRIx64
++#define FAudio_PRIu64 "I64u"
++#define FAudio_PRIx64 "I64x"
+ 
+ extern void FAudio_Log(char const *msg);
+ 
+--- a/libs/mpg123/src/libmpg123/gapless.h
++++ b/libs/mpg123/src/libmpg123/gapless.h
+@@ -106,7 +106,7 @@ static void frame_buffercheck(mpg123_han
+ 
+ 		if(VERBOSE3)
+ 			fprintf(stderr, "\nNote: Cut frame %" PRIi64
+-				" buffer on beginning of stream by %" PRIi64 " samples, fill now %zu bytes.\n"
++				" buffer on beginning of stream by %" PRIi64 " samples, fill now %u bytes.\n"
+ 			,	fr->num, fr->firstoff, fr->buffer.fill);
+ 		/* We can only reach this frame again by seeking. And on seeking, firstoff will be recomputed.
+ 		   So it is safe to null it here (and it makes the if() decision abort earlier). */
+--- a/libs/mpg123/src/libmpg123/readers.c
++++ b/libs/mpg123/src/libmpg123/readers.c
+@@ -42,7 +42,7 @@ static ptrdiff_t fdread(mpg123_handle *f
+ 		int ret = fr->rdat.r_read64(fr->rdat.iohandle, buf, count, &got);
+ 		if(ret<0)
+ 		{
+-			if(NOQUIET) merror("error reading %zu bytes", count);
++			if(NOQUIET) merror("error reading %u bytes", count);
+ 			return -1;
+ 		}
+ 		if(VERBOSE3) mdebug("read %zu bytes of %zu", got, count);

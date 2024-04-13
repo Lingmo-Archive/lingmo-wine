@@ -1,0 +1,46 @@
+description: don't append wine to the default path settings
+author: Michael Gilbert <mgilbert@debian.org>
+forwarded: not-needed
+
+--- a/configure.ac
++++ b/configure.ac
+@@ -91,9 +91,9 @@ AC_ARG_WITH(wine64,    AS_HELP_STRING([-
+ 
+ AC_CANONICAL_HOST
+ 
+-AC_SUBST(dlldir,[\${libdir}/wine])
+-AC_SUBST(fontdir,[\${datadir}/wine/fonts])
+-AC_SUBST(nlsdir,[\${datadir}/wine/nls])
++AC_SUBST(dlldir,[\${libdir}])
++AC_SUBST(fontdir,[/usr/share/wine/fonts])
++AC_SUBST(nlsdir,[\${datadir}/nls])
+ AC_SUBST(srcdir)
+ 
+ dnl **** Check for some programs ****
+--- a/tools/makedep.c
++++ b/tools/makedep.c
+@@ -3053,7 +3053,7 @@ static void output_source_in( struct mak
+     output( "%s:", obj_dir_path( make, obj ));
+     output_filenames( source->dependencies );
+     output( "\n" );
+-    add_install_rule( make, obj, 0, obj, strmake( "d$(datadir)/wine/%s", obj ));
++    add_install_rule( make, obj, 0, obj, strmake( "d$(datadir)/%s", obj ));
+ }
+ 
+ 
+--- a/dlls/ntdll/Makefile.in
++++ b/dlls/ntdll/Makefile.in
+@@ -76,4 +76,4 @@ unix_loader_EXTRADEFS = \
+ 	-DBINDIR=\"${bindir}\" \
+ 	-DSYSTEMDLLPATH=\"${system_dllpath}\" \
+ 	-DDLL_TO_BINDIR=\"`${MAKEDEP} -R ${dlldir} ${bindir}`\" \
+-	-DBIN_TO_DATADIR=\"`${MAKEDEP} -R ${bindir} ${datadir}/wine`\"
++	-DBIN_TO_DATADIR=\"`${MAKEDEP} -R ${bindir} ${datadir}`\"
+--- a/dlls/win32u/Makefile.in
++++ b/dlls/win32u/Makefile.in
+@@ -56,4 +56,4 @@ SOURCES = \
+ 	window.c \
+ 	winstation.c
+ 
+-font_EXTRADEFS = -DWINE_FONT_DIR=\"`${MAKEDEP} -R ${datadir}/wine ${fontdir}`\"
++font_EXTRADEFS = -DWINE_FONT_DIR=\"`${MAKEDEP} -R ${datadir} ${fontdir}`\"
